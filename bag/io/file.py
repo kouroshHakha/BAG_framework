@@ -2,7 +2,7 @@
 
 """This module handles file related IO.
 """
-from typing import Dict, Any
+from typing import Dict, Any, Union
 
 import os
 import tempfile
@@ -10,6 +10,7 @@ import time
 import pkg_resources
 import codecs
 import string
+from pathlib import Path
 
 import yaml
 import pickle
@@ -22,12 +23,12 @@ class Pickle:
     A global class for reading and writing Pickle format.
     """
     @staticmethod
-    def save(obj, file, **kwargs) -> None:
+    def save(obj, file: Union[str, Path], **kwargs) -> None:
         with open(file, 'wb') as f:
             pickle.dump(obj, f, pickle.HIGHEST_PROTOCOL)
 
     @staticmethod
-    def load(file, **kwargs):
+    def load(file: Union[str, Path], **kwargs):
         with open(file, 'rb') as f:
             return pickle.load(f)
 
@@ -38,12 +39,14 @@ class Yaml:
     For backward compatibility some module functions may overlap with this.
     """
     @staticmethod
-    def save(obj, file, **kwargs) -> None:
+    def save(obj, file: Union[str, Path], **kwargs) -> None:
+        file = Path(file)
+        file.parent.mkdir(parents=True, exist_ok=True)
         with open(file, 'w') as f:
             yaml.dump(obj, f)
 
     @staticmethod
-    def load(file, **kwargs):
+    def load(file: Union[str, Path], **kwargs):
         with open(file, 'r') as f:
             return yaml.load(f, Loader=yaml.Loader)
 
