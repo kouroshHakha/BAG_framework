@@ -5,6 +5,9 @@ import pdb
 
 from bag.io.file import Pickle, Yaml
 from bag.core import BagProject
+from bag.util.misc import register_pdb_hook
+
+register_pdb_hook()
 
 io_cls_dict = {
     'pickle': Pickle,

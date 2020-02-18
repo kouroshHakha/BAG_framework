@@ -47,7 +47,7 @@ class TestbenchManager(abc.ABC):
         return self.specs.get('sim_vars', {})
 
     # noinspection PyMethodMayBeStatic
-    def pre_setup(self, tb_params: Optional[Dict[str, Any]]) -> Optional[Dict[str, Any]]:
+    def pre_setup(self, tb_params: Dict[str, Any]) -> Dict[str, Any]:
         """Override to perform any operations prior to calling the setup() function.
 
         Parameters
@@ -174,6 +174,40 @@ class TestbenchManager(abc.ABC):
         if tb_fname.exists():
             return load_sim_file(str(tb_fname))
         raise ValueError(f'simulation results does not exist in {str(tb_fname)}')
+
+    @classmethod
+    def record_array(cls, output_dict: Dict[str, Any], data_dict: Dict[str, Any], arr: np.ndarray,
+                     arr_name: str, sweep_params: List[str]) -> None:
+        """Add the given numpy array into BAG's data structure dictionary.
+
+        This method adds the given numpy array to output_dict, and make sure
+        sweep parameter information are treated properly.
+
+        Parameters
+        ----------
+        output_dict : Dict[str, Any]
+            the output dictionary.
+        data_dict : Dict[str, Any]
+            the raw simulation data dictionary.
+        arr : np.ndarray
+            the numpy array to record.
+        arr_name : str
+            name of the given numpy array.
+        sweep_params : List[str]
+            a list of sweep parameters for thhe given array.
+        """
+        if 'sweep_params' in output_dict:
+            swp_info = output_dict['sweep_params']
+        else:
+            swp_info = {}
+            output_dict['sweep_params'] = swp_info
+
+        # record sweep parameters information
+        for var in sweep_params:
+            if var not in output_dict:
+                output_dict[var] = data_dict[var]
+        swp_info[arr_name] = sweep_params
+        output_dict[arr_name] = arr
 
 
 class MeasurementManager(abc.ABC):
