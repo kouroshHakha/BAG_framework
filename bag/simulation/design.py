@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from typing import Any, Union, Type, Mapping, Dict, Optional, cast
 
 import abc
@@ -34,7 +36,7 @@ class DesignerBase(abc.ABC):
     update() method. However it can be read as an immutable type.
     """
 
-    def __init__(self,  bprj: BagProject, root_dir: Path, dsn_specs: Mapping[str, Any],
+    def __init__(self,  bprj: BagProject, root_dir: Union[Path, str], dsn_specs: Mapping[str, Any],
                  dsn_db: Optional[Dict[int, Mapping[str, Any]]] = None, use_cache: bool = True
                  ) -> None:
         # Bag 2.0 has a bad architecture in terms of lay_db, sch_db. prj only owns sch_db and
@@ -42,7 +44,7 @@ class DesignerBase(abc.ABC):
         # sch_db can be passed around by passing the prj object around.
 
         self._prj = bprj
-        self._root_dir = root_dir
+        self._root_dir = Path(root_dir)
         self._work_dir = None
         self._dsn_specs = {k: deepcopy(v) for k, v in dsn_specs.items()}
         self.specs = None
@@ -59,6 +61,20 @@ class DesignerBase(abc.ABC):
             self._dsn_db = dsn_db
 
         self.commit()
+
+    @classmethod
+    @abc.abstractmethod
+    def get_params_info(cls) -> Dict[str, str]:
+        """Returns a dictionary containing parameter descriptions.
+
+        Override this method to return a dictionary from parameter names to descriptions.
+
+        Returns
+        -------
+        param_info : dict[str, str]
+            dictionary from parameter name to description.
+        """
+        raise NotImplementedError
 
     @property
     def work_dir(self) -> Path:
@@ -89,9 +105,11 @@ class DesignerBase(abc.ABC):
         self._dsn_specs = {k: deepcopy(v) for k, v in specs.items()}
         self.commit()
 
-    def new_designer(self, dsn_cls_str: str, dsn_specs: Mapping[str, Any]):
+    def new_designer(self, dsn_cls: Union[str, Type[DesignerBase]],
+                     dsn_specs: Mapping[str, Any]):
         # call this to create new designer masters
-        dsn_cls = cast(Type[DesignerBase], import_class(dsn_cls_str))
+        if isinstance(dsn_cls, str):
+            dsn_cls = cast(Type[DesignerBase], import_class(dsn_cls))
         return dsn_cls(self._prj, self._root_dir, dsn_specs, self._dsn_db)
 
     def design(self) -> Mapping[str, Any]:
@@ -107,7 +125,7 @@ class DesignerBase(abc.ABC):
         return ans
 
     async def async_design(self):
-        # This is the public method that should be called when doing hierarchy design
+        # This is the public method that should be called when doing hierarchy design, via asyncio
         try:
             ans = self._dsn_db[hash(self.key)]
             print('Design found, loading answer ...')
