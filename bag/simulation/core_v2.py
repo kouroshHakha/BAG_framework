@@ -278,7 +278,7 @@ class MeasurementManager(abc.ABC):
         if load_results:
             return tb_obj.load_results(impl_cell, tbm_dict)
 
-        wrapper = tbm_dict['wrapper']
+        wrapper = tbm_dict.get('wrapper', {})
         wrapper_key = to_immutable(wrapper)
         gen_wrapper = not self._wrapper_exists(wrapper_key)
         gen_wrapper = self.gen_wrapper and gen_wrapper
