@@ -141,6 +141,7 @@ class DesignerBase(abc.ABC):
 
     async def async_gen_dut(self, cell_name: str, dut_specs: Mapping[str, Any],
                             lay_cls: Optional[str] = None, sch_gen: SchGenInfo = None,
+                            routing_grid_params: Optional[Mapping[str, Any]] = None,
                             extract: bool = False):
         # creates a dut a single dut can be shared for multiple simulations / measurements
         impl_lib = self.get_default_impl_lib()
@@ -150,10 +151,11 @@ class DesignerBase(abc.ABC):
             params=dut_specs
         )
         if lay_cls:
-            gen_specs['lay_cls'] = lay_cls
+            if not routing_grid_params:
+                raise ValueError('For layout generation routing grid should be specified!')
+            gen_specs.update(lay_cls=lay_cls, routing_grid=routing_grid_params)
         if sch_gen:
-            gen_specs['sch_lib'] = sch_gen.sch_lib
-            gen_specs['sch_cell'] = sch_gen.sch_cell
+            gen_specs.update(sch_lib=sch_gen.sch_lib, sch_cell=sch_gen.sch_cell)
 
         self._prj.generate_cell(gen_specs, gen_lay=extract, gen_sch=True, run_lvs=extract,
                                 run_rcx=extract)
