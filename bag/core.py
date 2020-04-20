@@ -661,7 +661,7 @@ class BagProject(object):
         prefix = kwargs.get('prefix', '')
         suffix = kwargs.get('suffix', '')
 
-        grid_specs = specs['routing_grid']
+        grid_specs = specs.get('routing_grid', None)
         impl_lib = specs['impl_lib']
         impl_cell = specs['impl_cell']
         lay_str = specs.get('lay_class', '')
