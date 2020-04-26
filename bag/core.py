@@ -618,6 +618,26 @@ class BagProject(object):
                       **kwargs,
                       ):
         # type: (...) -> Optional[Union[pstats.Stats, Dict[str, Any]]]
+        coro = self.async_generate_cell(specs, temp_cls, gen_lay, gen_sch, run_lvs, run_rcx,
+                                        use_cybagoa, debug, profile_fname, use_cache, save_cache,
+                                        **kwargs)
+        return batch_async_task([coro])[0]
+
+    async def async_generate_cell(self,  # type: BagProject
+                                  specs,  # type: Dict[str, Any]
+                                  temp_cls=None,  # type: Optional[Type[TemplateType]]
+                                  gen_lay=True,  # type: bool
+                                  gen_sch=False,  # type: bool
+                                  run_lvs=False,  # type: bool
+                                  run_rcx=False,  # type: bool
+                                  use_cybagoa=True,  # type: bool
+                                  debug=False,  # type: bool
+                                  profile_fname='',  # type: str
+                                  use_cache=False,  # type: bool
+                                  save_cache=False,  # type: bool
+                                  **kwargs,
+                                  ):
+        # type: (...) -> Optional[Union[pstats.Stats, Dict[str, Any]]]
         """Generate layout/schematic of a given cell from specification file.
 
         Parameters
@@ -729,7 +749,8 @@ class BagProject(object):
         lvs_passed = False
         if run_lvs:
             print('running lvs...')
-            lvs_passed, lvs_log = self.run_lvs(impl_lib, impl_cell, gds_lay_file=gds_lay_file)
+            lvs_passed, lvs_log = await self.async_run_lvs(impl_lib, impl_cell,
+                                                           gds_lay_file=gds_lay_file)
             if lvs_passed:
                 print('LVS passed!')
                 result = dict(log='')
@@ -738,7 +759,7 @@ class BagProject(object):
 
         if run_rcx and ((run_lvs and lvs_passed) or not run_lvs):
             print('running rcx...')
-            rcx_passed, rcx_log = self.run_rcx(impl_lib, impl_cell)
+            rcx_passed, rcx_log = await self.async_run_rcx(impl_lib, impl_cell)
             if rcx_passed:
                 print('RCX passed!')
                 result = dict(log='')
@@ -768,9 +789,21 @@ class BagProject(object):
                       load_results: bool = False,
                       extract: bool = False,
                       run_sim: bool = True) -> Optional[Dict[str, Any]]:
+        coro = self.async_simulate_cell(specs, gen_cell, gen_wrapper, gen_tb, load_results,
+                                        extract, run_sim)
+        return batch_async_task([coro])[0]
+
+    async def async_simulate_cell(self,
+                                  specs: Dict[str, Any],
+                                  gen_cell: bool = True,
+                                  gen_wrapper: bool = True,
+                                  gen_tb: bool = True,
+                                  load_results: bool = False,
+                                  extract: bool = False,
+                                  run_sim: bool = True) -> Optional[Dict[str, Any]]:
         """
-        Runs a minimum executable parts of the Testbench Manager flow selectively according to
-        a spec dictionary.
+        Coroutine that runs a minimum executable parts of the Testbench Manager flow selectively
+        according to a spec dictionary.
 
         For example you can set the flags to generate a new cell, but since wrapper and test bench
         exist, maybe you want to skip those, and run the simulation in the end. Maybe you
@@ -814,12 +847,12 @@ class BagProject(object):
 
         if gen_cell and not load_results:
             print('generating cell ...')
-            self.generate_cell(specs,
-                               gen_lay=extract,
-                               gen_sch=True,
-                               run_lvs=extract,
-                               run_rcx=extract,
-                               use_cybagoa=True)
+            await self.async_generate_cell(specs,
+                                           gen_lay=extract,
+                                           gen_sch=True,
+                                           run_lvs=extract,
+                                           run_rcx=extract,
+                                           use_cybagoa=True)
             print('cell generated.')
 
         # if testbench manager v2 found use that instead of interpreting simulation directly
@@ -837,16 +870,17 @@ class BagProject(object):
             if load_results:
                 return tbm.load_results(impl_cell, tbm_specs)
 
-            results = tbm.simulate(bprj=self,
-                                   impl_lib=impl_lib,
-                                   impl_cell=impl_cell,
-                                   sim_view_list=sim_view_list,
-                                   env_list=sim_envs,
-                                   tb_dict=tbm_specs,
-                                   wrapper_dict=None,
-                                   gen_tb=gen_tb,
-                                   gen_wrapper=gen_wrapper,
-                                   run_sim=run_sim)
+            results = await tbm.setup_and_simulate(bprj=self,
+                                                   impl_lib=impl_lib,
+                                                   impl_cell=impl_cell,
+                                                   sim_view_list=sim_view_list,
+                                                   env_list=sim_envs,
+                                                   tb_dict=tbm_specs,
+                                                   wrapper_dict=None,
+                                                   gen_tb=gen_tb,
+                                                   gen_wrapper=gen_wrapper,
+                                                   run_sim=run_sim)
+
             return results
 
         sim_params = specs.get('sim_params', None)
@@ -935,7 +969,7 @@ class BagProject(object):
             tb.update_testbench()
             print('setup completed.')
             print('running simulation ...')
-            tb.run_simulation()
+            await tb.async_run_simulation()
             print('simulation done.')
             print('loading results ...')
             results = sim_data.load_sim_results(tb.save_dir)

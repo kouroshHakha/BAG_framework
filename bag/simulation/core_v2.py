@@ -138,7 +138,7 @@ class TestbenchManager(abc.ABC):
         return tb
 
     async def setup_and_simulate(self, bprj, impl_lib, impl_cell, sim_view_list, env_list, tb_dict,
-                                 wrapper_dict, gen_tb, gen_wrapper, run_sim):
+                                 wrapper_dict=None, gen_tb=True, gen_wrapper=True, run_sim=True):
         tb: Testbench = self.setup(bprj, impl_lib=impl_lib, impl_cell=impl_cell,
                                    sim_view_list=sim_view_list, env_list=env_list,
                                    tb_dict=tb_dict, wrapper_dict=wrapper_dict, gen_tb=gen_tb,

@@ -153,12 +153,12 @@ class DesignerBase(abc.ABC):
         if lay_cls:
             if not routing_grid_params:
                 raise ValueError('For layout generation routing grid should be specified!')
-            gen_specs.update(lay_cls=lay_cls, routing_grid=routing_grid_params)
+            gen_specs.update(lay_class=lay_cls, routing_grid=routing_grid_params)
         if sch_gen:
             gen_specs.update(sch_lib=sch_gen.sch_lib, sch_cell=sch_gen.sch_cell)
 
-        self._prj.generate_cell(gen_specs, gen_lay=extract, gen_sch=True, run_lvs=extract,
-                                run_rcx=extract)
+        await self._prj.async_generate_cell(gen_specs, gen_lay=extract, gen_sch=True, run_lvs=extract,
+                                            run_rcx=extract)
         view = 'netlist' if extract else 'schematic'
         return DUTInfo(impl_lib, cell_name, view)
 
@@ -176,12 +176,12 @@ class DesignerBase(abc.ABC):
             sim_cell_specs['sim_params'] = sim_specs
 
         extract = dut.view == 'netlist'
-        res = cast(Mapping[str, Any], self._prj.simulate_cell(sim_cell_specs, gen_cell=False,
-                                                              extract=extract))
+        res = cast(Mapping[str, Any], await self._prj.async_simulate_cell(sim_cell_specs, gen_cell=False,
+                                                                          extract=extract))
         return res
 
-    async def async_meas_cell(self, dut: DUTInfo,
-                              meas_specs: Mapping[str, Any]) -> Mapping[str, Any]:
+    def meas_cell(self, dut: DUTInfo,
+                  meas_specs: Mapping[str, Any]) -> Mapping[str, Any]:
         # runs the measurement class and returns the result dictionary
         meas_cell_specs = dict(
             impl_lib=dut.impl_lib,
